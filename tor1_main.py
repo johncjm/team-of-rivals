@@ -1,5 +1,5 @@
-# tor1_main.py - Hybrid Architecture: v15 Foundation + Key Innovations
-# Combines working v15 direct execution with Quick Mode reviewer system and steering controls
+# tor1_main_v2.py - Fixed Mode Switching, Reviewer Emojis, and Layout
+# Hybrid Architecture: v15 Foundation + Key Innovations + Critical Bug Fixes
 
 import streamlit as st
 import google.generativeai as genai
@@ -41,10 +41,13 @@ if 'steering_command' not in st.session_state:
     st.session_state.steering_command = ""
 if 'steering_command_used' not in st.session_state:
     st.session_state.steering_command_used = False
+# FIXED: Track follow-up mode explicitly
+if 'follow_up_mode' not in st.session_state:
+    st.session_state.follow_up_mode = None
 
 # Load API keys
 try:
-    gemini_key = st.secrets["GOOGLE_API_KEY"]
+    gemini_key = st.secrets["GOOGLE_API_KEY"]  # FIXED: Correct key name
     openai_key = st.secrets["OPENAI_API_KEY"] 
     anthropic_key = st.secrets["ANTHROPIC_API_KEY"]
     api_available = True
@@ -93,18 +96,18 @@ IMPORTANT: Never respond as if you are another model. Each model speaks only for
 REVIEWER_GUIDELINES = """
 Your role is to help users assess how much they can rely on the primary response. Think of yourself as their research assistant, spotting elements that deserve caution or further verification.
 
-**Consider starting your response with a reliability assessment:**
+**Start your response with a reliability assessment emoji:**
 • 🟢 if the information looks reliable and you don't see significant concerns
 • 🟡 if it's useful but worth verifying some points or adding context
 • 🔴 if there are significant issues or the user should approach with caution
 
-**Examples of helpful reliability assessments:**
+**After the emoji, explain your assessment in 1-2 sentences. Examples:**
 
-🟢 "This covers the key points well - the theories mentioned are the commonly accepted explanations, and the verification suggestions are appropriate."
+🟢 This covers the key points well - the approaches mentioned are standard best practices, and the specific suggestions are appropriate for this type of project.
 
-🟡 "Good framework, but this doesn't address the transition process for current visiting students - you'll want to contact admissions about simplified procedures for your specific situation."
+🟡 Good framework, but this doesn't address the transition process for current visiting students - you'll want to contact admissions about simplified procedures for your specific situation.
 
-🔴 "Several specific claims here need verification. The 2025 salary projections don't specify data sources, and the market predictions assume stable economic conditions. Check current industry reports before relying on these numbers."
+🔴 Several specific claims here need verification. The 2025 salary projections don't specify data sources, and the market predictions assume stable economic conditions.
 
 **What to look for:**
 - Claims that seem uncertain or hard to verify
@@ -316,32 +319,23 @@ def assign_quick_mode_roles(selected_model):
     return responder, reviewer
 
 def parse_reviewer_response(response: str) -> tuple:
-    """Parse reviewer response for emoji and content"""
+    """FIXED: Parse reviewer response for emoji and content"""
     if not response or not response.strip():
         return "🔍", "Review completed", response
     
     response = response.strip()
-    lines = response.split('\n', 1)
-    first_line = lines[0].strip()
-    explanation = lines[1].strip() if len(lines) > 1 else ""
     
-    # Check for reliability emojis
-    reliability_emojis = {
-        "🟢": "No significant concerns",
-        "🟡": "Worth verifying some points", 
-        "🔴": "Significant issues - approach with caution"
-    }
+    # Check for reliability emojis at the start
+    reliability_emojis = ["🟢", "🟡", "🔴"]
     
-    for emoji, description in reliability_emojis.items():
-        if first_line.startswith(emoji):
-            remaining = first_line[len(emoji):].strip()
-            if remaining:
-                return emoji, remaining, explanation
-            else:
-                return emoji, description, explanation
+    for emoji in reliability_emojis:
+        if response.startswith(emoji):
+            # Remove emoji and get remaining text
+            remaining = response[len(emoji):].strip()
+            return emoji, remaining, ""
     
-    # Fallback
-    return "🔍", first_line, explanation
+    # Fallback - return whole response
+    return "🔍", response, ""
 
 # Main UI (adapted from v15 with Quick/Deep mode selection)
 st.title("🎭 Team of Rivals")
@@ -393,7 +387,7 @@ else:
 st.subheader("📢 Share Your Challenge")
 st.markdown("**Think out loud:** Complex problems often need rambling to understand properly. Don't worry about being perfectly clear - the consultants will ask follow-up questions!")
 
-# Text input
+# Text input - FIXED: Auto-enable button with on_change
 user_problem = st.text_area(
     "Describe your challenge:",
     placeholder="Examples:\n- I have some Python code that feels messy\n- Need help planning a difficult team conversation\n- Trying to decide between two strategic directions\n- Working on a presentation that isn't clicking\n\nDon't worry about being perfectly clear - they'll ask questions!",
@@ -402,7 +396,8 @@ user_problem = st.text_area(
 )
 
 # Start consultation button (v15 direct execution style)
-if st.button("🚀 Start AI Consultation", disabled=not user_problem or not api_available):
+button_disabled = not user_problem.strip() or not api_available
+if st.button("🚀 Start AI Consultation", disabled=button_disabled):
     
     # Initialize conversation thread (v15 style)
     st.session_state.conversation_thread = [{
@@ -429,56 +424,61 @@ if st.session_state.session_active:
             if entry['speaker'] == 'User':
                 st.markdown(f"**👤 You:** {entry['content']}")
             elif entry['speaker'].endswith(' [Reviewer]'):
-                # Show reviewer responses with special formatting
+                # FIXED: Show reviewer responses with proper emoji parsing
                 reviewer_name = entry['speaker'].replace(' [Reviewer]', '')
                 icon = "🤖" if "GPT-4" in reviewer_name else "🧠" if "Claude" in reviewer_name else "💎"
-                st.markdown(f"**🔍 Review by {icon} {reviewer_name}:** {entry['content']}")
+                
+                # Parse the review response
+                emoji, content, explanation = parse_reviewer_response(entry['content'])
+                
+                st.markdown(f"**🔍 Review by {icon} {reviewer_name}:** {emoji} {content}")
             else:
                 icon = "🤖" if "GPT-4" in entry['speaker'] else "🧠" if "Claude" in entry['speaker'] else "💎"
                 st.markdown(f"**{icon} {entry['speaker']}:** {entry['content']}")
             st.markdown("---")
     
-    # Continue conversation section with steering controls
+    # FIXED: Better organized continue conversation section
     if len(st.session_state.conversation_thread) > 1:  # After initial responses
         st.markdown("### 💬 Continue the Conversation")
-        st.markdown("*Feel free to push back, ask follow-ups, or redirect the discussion!*")
         
-        # Show steering controls
-        show_steering_controls()
-        st.markdown("---")
+        # Show steering controls first (clean section)
+        steering_active = show_steering_controls()
+        if steering_active:
+            st.markdown("---")
         
-        # Mode switching options
+        # FIXED: Mode switching with proper state management
+        st.markdown("### 🔄 Choose Response Style")
         current_mode = st.session_state.consultation_mode
         
         col1, col2 = st.columns(2)
         with col1:
-            if current_mode == "quick":
-                mode_button_text = "🏃‍♂️ Quick Follow-up"
-                mode_help = "Same model + reviewer approach"
-            else:
-                mode_button_text = "🔬 Deep Dive Follow-up"  
-                mode_help = "All consultants collaborate"
-        
+            if st.button("🏃‍♂️ Quick Follow-up", help="Single model + reviewer response"):
+                st.session_state.follow_up_mode = "quick"
         with col2:
-            if current_mode == "quick":
-                if st.button("🔬 Switch to Deep Dive", help="Get all three models collaborating"):
-                    st.session_state.consultation_mode = "deep"
-                    st.rerun()
-            else:
-                if st.button("🏃‍♂️ Quick Question", help="Single model + reviewer"):
-                    st.session_state.consultation_mode = "quick"
-                    st.rerun()
+            if st.button("🔬 Deep Dive Follow-up", help="All consultants collaborate"):
+                st.session_state.follow_up_mode = "deep"
         
-        # Follow-up input (v15 direct execution style)
+        # Show current mode selection
+        intended_mode = st.session_state.get("follow_up_mode", current_mode)
+        if intended_mode == "quick":
+            st.info("**Next response:** Quick Mode - one model answers, another reviews")
+        else:
+            st.info("**Next response:** Deep Dive - all three consultants collaborate")
+        
+        st.markdown("---")
+        
+        # FIXED: Follow-up input with proper state management
         follow_up = st.text_area(
             "Ask a follow-up, share more context, or redirect:",
-            value=st.session_state.current_follow_up,
             placeholder="Examples:\n- Can you be more specific about...\n- That's not quite right - here's what I meant...\n- I like that direction, but what about...\n- You're overcomplicating this - I just need...",
             height=80,
-            key=f"followup_{st.session_state.follow_up_counter}"
+            key=f"followup_{st.session_state.follow_up_counter}",
+            value=""  # Always start with empty input
         )
         
-        if st.button("💬 Ask Follow-up", key=f"ask_{st.session_state.follow_up_counter}") and follow_up:
+        # FIXED: Button enabled when text is present
+        follow_up_button_disabled = not follow_up.strip()
+        if st.button("💬 Ask Follow-up", disabled=follow_up_button_disabled, key=f"ask_{st.session_state.follow_up_counter}"):
             
             # Add user question to thread
             st.session_state.conversation_thread.append({
@@ -490,8 +490,8 @@ if st.session_state.session_active:
             
             api_keys = {'openai': openai_key, 'anthropic': anthropic_key, 'gemini': gemini_key}
             
-            # Determine models to query based on mode
-            if st.session_state.consultation_mode == "quick":
+            # FIXED: Use the intended mode, not current mode
+            if intended_mode == "quick":
                 # Quick Mode: use assigned responder and reviewer
                 if not st.session_state.quick_responder:
                     # First quick follow-up, need to assign
@@ -524,7 +524,7 @@ if st.session_state.session_active:
                     })
             
             else:
-                # Deep Dive Mode: all models respond
+                # FIXED: Deep Dive Mode - all models respond
                 models = ["GPT-4", "Claude", "Gemini"]
                 random.shuffle(models)
                 
@@ -538,16 +538,16 @@ if st.session_state.session_active:
                             "time": datetime.now()
                         })
             
-            # Clear input and increment counter
-            st.session_state.current_follow_up = ""
+            # Clear input and reset state
             st.session_state.follow_up_counter += 1
+            st.session_state.follow_up_mode = None  # Reset mode selection
             st.rerun()
     
     # Session management
     st.markdown("---")
     if st.button("🔄 Start New Consultation"):
         # Reset session (v15 style)
-        for key in ['conversation_thread', 'session_active', 'round_number', 'follow_up_counter', 'current_follow_up', 'quick_responder', 'quick_reviewer']:
+        for key in ['conversation_thread', 'session_active', 'round_number', 'follow_up_counter', 'current_follow_up', 'quick_responder', 'quick_reviewer', 'follow_up_mode']:
             if key in st.session_state:
                 del st.session_state[key]
         clear_steering_command()
@@ -594,9 +594,11 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
             "time": datetime.now()
         })
         
+        # FIXED: Display review with proper emoji parsing
         reviewer_icon = "🤖" if reviewer == "GPT-4" else "🧠" if reviewer == "Claude" else "💎"
+        emoji, content, explanation = parse_reviewer_response(review_response)
         st.markdown(f"### 🔍 Review by {reviewer_icon} {reviewer}")
-        st.markdown(review_response)
+        st.markdown(f"{emoji} {content}")
     
     else:
         # Deep Dive Mode: All models respond (v15 style)
