@@ -1,5 +1,5 @@
-# tor1_main_v2.py - Fixed Mode Switching, Reviewer Emojis, and Layout
-# Hybrid Architecture: v15 Foundation + Key Innovations + Critical Bug Fixes
+# tor1_main.py - Pre-Beta Version with Challenge Assumptions Mode
+# Team of Rivals: Complete implementation with Eleventh Man, UI revamp, Whisper restoration
 
 import streamlit as st
 import google.generativeai as genai
@@ -19,7 +19,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize session state (simplified from RC10, based on v15)
+# Initialize session state
 if 'conversation_thread' not in st.session_state:
     st.session_state.conversation_thread = []
 if 'session_active' not in st.session_state:
@@ -36,18 +36,15 @@ if 'quick_responder' not in st.session_state:
     st.session_state.quick_responder = None
 if 'quick_reviewer' not in st.session_state:
     st.session_state.quick_reviewer = None
-# Steering controls
-if 'steering_command' not in st.session_state:
-    st.session_state.steering_command = ""
-if 'steering_command_used' not in st.session_state:
-    st.session_state.steering_command_used = False
-# FIXED: Track follow-up mode explicitly
-if 'follow_up_mode' not in st.session_state:
-    st.session_state.follow_up_mode = None
+if 'audio_transcription' not in st.session_state:
+    st.session_state.audio_transcription = ""
+# Challenge Assumptions mode
+if 'challenge_assumptions_active' not in st.session_state:
+    st.session_state.challenge_assumptions_active = False
 
 # Load API keys
 try:
-    gemini_key = st.secrets["GOOGLE_API_KEY"]  # FIXED: Correct key name
+    gemini_key = st.secrets["GOOGLE_API_KEY"]
     openai_key = st.secrets["OPENAI_API_KEY"] 
     anthropic_key = st.secrets["ANTHROPIC_API_KEY"]
     api_available = True
@@ -92,7 +89,7 @@ Remember: You're not alone - your collaborators will step up and challenge you i
 IMPORTANT: Never respond as if you are another model. Each model speaks only for themselves in collaborative discussions.
 """
 
-# Quick Mode Reviewer Guidelines (from modular version)
+# Quick Mode Reviewer Guidelines
 REVIEWER_GUIDELINES = """
 Your role is to help users assess how much they can rely on the primary response. Think of yourself as their research assistant, spotting elements that deserve caution or further verification.
 
@@ -121,64 +118,45 @@ Your goal is to put the user in a better position to assess the response. Focus 
 IMPORTANT: Never respond as if you are another model. You are providing your own independent review.
 """
 
-# Steering Controls Functions
-def show_steering_controls():
-    """Display conversation steering buttons."""
-    st.markdown("### 🎯 Steer the Conversation")
-    st.caption("Quick ways to redirect or refocus the discussion")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("**🔍 Clarity & Focus**")
-        if st.button("Be more direct", help="Ask for clearer, more direct responses"):
-            st.session_state.steering_command = "Please be more direct and cut to the point."
-        if st.button("I don't understand", help="Ask for clearer explanation"):
-            st.session_state.steering_command = "I don't understand. Could you rephrase that more clearly?"
-        if st.button("Focus on core issue", help="Get back to the main problem"):
-            st.session_state.steering_command = "Please focus on the core issue, not the surrounding details."
-    
-    with col2:
-        st.markdown("**🎯 Depth & Direction**")
-        if st.button("Go deeper", help="Explore the last point in more detail"):
-            st.session_state.steering_command = "Please go deeper on that last point."
-        if st.button("Focus on solutions", help="Move toward actionable recommendations"):
-            st.session_state.steering_command = "Let's focus on finding a solution now."
-        if st.button("Give me recommendations", help="Ask for clear next steps"):
-            st.session_state.steering_command = "Please give me clear recommendations."
-    
-    # Tone check section
-    st.markdown("**🙅‍♂️ Tone Check**")
-    col3, col4 = st.columns(2)
-    with col3:
-        if st.button("Less flattery", help="Ask for honest assessment instead of praise"):
-            st.session_state.steering_command = "Please be honest and cut down on praise or flattery."
-    with col4:
-        if st.button("More disagreement", help="Encourage alternative viewpoints"):
-            st.session_state.steering_command = "I'd like to hear more disagreement or alternative takes."
-    
-    # Show current steering command if one was selected
-    if st.session_state.get("steering_command"):
-        st.info(f"🎯 **Steering signal:** \"{st.session_state.steering_command}\"")
-        st.caption("This will be included in the next model prompt automatically.")
-        return True
-    
-    return False
+# Challenge Assumptions (Eleventh Man) Guidelines
+ELEVENTH_MAN_GUIDELINES = """
+**Your Role: Challenge Assumptions (The Eleventh Man)**
 
-def get_steering_command():
-    """Get and mark steering command as used."""
-    command = st.session_state.get("steering_command", "")
-    if command:
-        st.session_state.steering_command_used = True
-    return command
+Your designated role for this round is to be the "Eleventh Man." Even if you lean toward agreeing with the user or the other models, your duty is to constructively challenge the consensus to prevent groupthink.
 
-def clear_steering_command():
-    """Clear steering command after use."""
-    if "steering_command" in st.session_state:
-        del st.session_state.steering_command
-    st.session_state.steering_command_used = False
+**Your Goal:** To strengthen the final outcome by stress-testing the ideas on the table.
 
-# API calling functions (from v15, enhanced for Claude issues)
+**You must contribute a meaningfully different perspective** — even if you ultimately agree, your job is to explore what we may have missed.
+
+**How to Behave:**
+• **Question Assumptions:** What unstated beliefs is the current approach built on? Politely ask about them. ("This approach seems to assume X, have we considered Y?")
+• **Surface Potential Risks:** What could go wrong with the proposed plan? What are the second-order consequences?
+• **Propose a Plausible Alternative:** Construct the best possible argument for a different path. This isn't about being difficult; it's about ensuring all reasonable options are explored.
+• **Maintain a Collaborative Tone:** You are a "critical friend," not an adversary. Your goal is to help, not to win an argument. Frame your points constructively.
+
+Remember: You are a vital part of the team. Your job is to ensure that the group's conclusion is as robust and well-vetted as possible.
+
+IMPORTANT: Never respond as if you are another model. You are providing your own independent challenge to the group's thinking.
+"""
+
+# Audio transcription function (restored from v15)
+def transcribe_audio(audio_bytes, api_key):
+    """Transcribe audio using OpenAI Whisper"""
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        import io
+        audio_file = io.BytesIO(audio_bytes)
+        audio_file.name = "audio.wav"
+        
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file
+        )
+        return transcript.text
+    except Exception as e:
+        return f"Error transcribing audio: {str(e)}"
+
+# API calling functions
 def call_openai(prompt, api_key):
     """Call OpenAI GPT-4 API"""
     try:
@@ -198,7 +176,6 @@ def call_anthropic(prompt, api_key):
     try:
         client = anthropic.Anthropic(api_key=api_key)
         
-        # Enhanced handling for Claude's sensitivity issues
         response = client.messages.create(
             model="claude-3-5-sonnet-20240620",
             max_tokens=1200,
@@ -234,10 +211,12 @@ def call_gemini(prompt, api_key):
     except Exception as e:
         return f"[Gemini temporarily unavailable: {str(e)[:50]}...]"
 
-def generate_model_response(question: str, model_name: str, api_key_dict: Dict, is_initial: bool = False, role: str = "primary") -> str:
+def generate_model_response(question: str, model_name: str, api_key_dict: Dict, 
+                           is_initial: bool = False, role: str = "primary", 
+                           is_challenger: bool = False) -> str:
     """Generate a model's response with conversation context and guidelines"""
     
-    # Get recent context (from v15 approach)
+    # Get recent context
     recent_thread = []
     if st.session_state.conversation_thread:
         original_entry = st.session_state.conversation_thread[0]
@@ -254,7 +233,9 @@ def generate_model_response(question: str, model_name: str, api_key_dict: Dict, 
     ])
     
     # Select appropriate guidelines based on role
-    if role == "reviewer":
+    if is_challenger:
+        base_guidelines = ELEVENTH_MAN_GUIDELINES
+    elif role == "reviewer":
         base_guidelines = REVIEWER_GUIDELINES
     else:
         base_guidelines = CONVERSATION_GUIDELINES
@@ -277,14 +258,6 @@ def generate_model_response(question: str, model_name: str, api_key_dict: Dict, 
 • Collaborate naturally with other models in the discussion
 """
     
-    # Add steering command if present
-    steering = get_steering_command()
-    if steering:
-        steering_guidance = f"\n\n**User Steering Request:** {steering}"
-        clear_steering_command()
-    else:
-        steering_guidance = ""
-    
     # Create full prompt
     full_prompt = f"""{base_guidelines}
 
@@ -293,7 +266,7 @@ def generate_model_response(question: str, model_name: str, api_key_dict: Dict, 
 **Recent Conversation Context:**
 {context}
 
-**Current Question/Topic:** {question}{steering_guidance}
+**Current Question/Topic:** {question}
 
 You are {model_name} responding to this user query."""
 
@@ -319,7 +292,7 @@ def assign_quick_mode_roles(selected_model):
     return responder, reviewer
 
 def parse_reviewer_response(response: str) -> tuple:
-    """FIXED: Parse reviewer response for emoji and content"""
+    """Parse reviewer response for emoji and content"""
     if not response or not response.strip():
         return "🔍", "Review completed", response
     
@@ -336,34 +309,45 @@ def parse_reviewer_response(response: str) -> tuple:
     
     # Fallback - return whole response
     return "🔍", response, ""
+    # PART 2: UI and Main Application Logic
+# This goes directly after Part 1 (no additional imports needed)
 
-# Main UI (adapted from v15 with Quick/Deep mode selection)
+# Main UI with new text and layout
 st.title("🎭 Team of Rivals")
-st.markdown("*Where AI consultants collaborate on your toughest challenges*")
+st.markdown("*Let ChatGPT, Claude and Gemini collaborate to answer your questions or dig into your toughest challenges*")
 
-st.markdown("Three AI consultants work together to understand your situation and develop solutions. They listen, learn, and build on each other's insights to give you perspectives no single AI could provide.")
-
-# User participation guidance
-with st.expander("💡 How to get the best results", expanded=False):
+# Sidebar with comprehensive explanation
+with st.sidebar:
+    st.markdown("### How Team of Rivals Works")
     st.markdown("""
-    **You're an active participant, not a passive listener:**
-    - **Speak freely** - ramble, think out loud, contradict yourself. That's how real insights emerge.
-    - **Push back** if the discussion seems off track or missing something important.
-    - **Ask follow-ups** when you want them to dig deeper or explore different angles.
-    - **Use steering controls** to redirect the conversation when needed.
-    - **Don't worry about structure** - the consultants will help organize and focus the discussion.
-    
+    Are four heads (yours plus 3 LLMs) better than one? We think so, and we've built this app to try to find out!
+
+    Are you tired of asking an AI bot a simple question and not being sure how much to trust the answer? In Quick Mode, one model gives an answer and another model checks it out for you.
+
+    In Deep Dive Mode, all three models work together, first in a Listen & Learn phase to scope out your issue, whether it's a coding question or understanding why your screenplay isn't coming together. Then they switch to Build, Execute & Check, pooling their ideas and challenging each other's thinking to come up with your best path forward.
+
+    Could you do the same with a lot of copy and pasting? Yes, kinda! But besides cutting way down on that work, Team of Rivals includes prompt engineering developed in collaboration with the models themselves to mitigate their quirks and maximize their usefulness. Hallucinations? Sycophancy? We can't guarantee they'll go away, but we think you're on a better path than working with a bot in the wild.
+
+    As you work, you'll get suggestions for how to steer the discussion in the direction you want. And for a Deep Dive, you can activate "Challenge Assumptions" mode, in which one model is asked to be the fresh eye questioning assumptions and looking for weaknesses in proposed solutions.
+
+    **For the best results, be an active participant, not a passive listener:**
+
+    • **Speak freely** - ramble, think out loud, contradict yourself, especially if using audio for the initial input. That's how real insights emerge.
+    • **Push back** if the discussion seems off track or missing something important.
+    • **Ask follow-ups** when you want them to dig deeper or explore different angles.
+    • **Don't worry about structure** - the consultants will help organize and focus the discussion.
+
     **Remember:** The best consultations happen when you stay engaged and guide the conversation toward what you actually need!
     """)
 
 st.markdown("---")
 
-# Consultation mode selection (Quick vs Deep)
+# Consultation mode selection
 st.subheader("🎯 Choose Your Consultation Style")
 consultation_mode = st.radio(
     "How deep should we go?",
-    ["🏃‍♂️ Quick & Simple — with backup. Fast, direct answers with a second model reviewing for accuracy.",
-     "🔬 Deep strategic exploration (comprehensive, collaborative)"],
+    ["🏃‍♂️ Quick & Simple — one model, one answer plus one review. Can switch to Deep mode later.",
+     "🔬 Deep Dive — work with all three models to dig into your challenge and collaborate on solutions"],
     key="mode_selection"
 )
 
@@ -383,26 +367,49 @@ else:
     st.info("All three consultants will collaborate on your question.")
     selected_model = None
 
-# Problem input
+# Problem input with audio (restored from v15)
 st.subheader("📢 Share Your Challenge")
 st.markdown("**Think out loud:** Complex problems often need rambling to understand properly. Don't worry about being perfectly clear - the consultants will ask follow-up questions!")
 
-# Text input - FIXED: Auto-enable button with on_change
+# Audio input
+audio_input = st.audio_input("🎤 Record your challenge (captures nuance and context)")
+if audio_input is not None and api_available:
+    with st.spinner("Transcribing your audio..."):
+        audio_bytes = audio_input.read()
+        transcription = transcribe_audio(audio_bytes, openai_key)
+        st.session_state.audio_transcription = transcription
+        
+        if transcription and not transcription.startswith("Error"):
+            st.success("🎤 Audio transcribed!")
+            with st.expander("📝 What I heard", expanded=True):
+                st.write(transcription)
+
+# Text input
 user_problem = st.text_area(
-    "Describe your challenge:",
+    "Or type your challenge here:",
     placeholder="Examples:\n- I have some Python code that feels messy\n- Need help planning a difficult team conversation\n- Trying to decide between two strategic directions\n- Working on a presentation that isn't clicking\n\nDon't worry about being perfectly clear - they'll ask questions!",
     height=120,
     key="problem_input"
 )
 
-# Start consultation button (v15 direct execution style)
-button_disabled = not user_problem.strip() or not api_available
+# Combine inputs
+combined_input = ""
+if user_problem:
+    combined_input += user_problem
+if st.session_state.audio_transcription and not st.session_state.audio_transcription.startswith("Error"):
+    if combined_input:
+        combined_input += "\n\n[From voice input:] " + st.session_state.audio_transcription
+    else:
+        combined_input = st.session_state.audio_transcription
+
+# Start consultation button
+button_disabled = not combined_input.strip() or not api_available
 if st.button("🚀 Start AI Consultation", disabled=button_disabled):
     
-    # Initialize conversation thread (v15 style)
+    # Initialize conversation thread
     st.session_state.conversation_thread = [{
         "speaker": "User",
-        "content": user_problem,
+        "content": combined_input,
         "timestamp": "Initial request",
         "time": datetime.now()
     }]
@@ -414,7 +421,7 @@ if st.button("🚀 Start AI Consultation", disabled=button_disabled):
 # Show active consultation interface
 if st.session_state.session_active:
     
-    # Display conversation (v15 style)
+    # Display conversation
     st.markdown("---")
     st.subheader("💬 Consultation in Progress")
     
@@ -423,60 +430,70 @@ if st.session_state.session_active:
         with st.container():
             if entry['speaker'] == 'User':
                 st.markdown(f"**👤 You:** {entry['content']}")
+            elif entry['speaker'].endswith(' [Challenge Assumptions]'):
+                # Special formatting for challenger
+                challenger_name = entry['speaker'].replace(' [Challenge Assumptions]', '')
+                icon = "🤖" if "GPT-4" in challenger_name else "🧠" if "Claude" in challenger_name else "💎"
+                st.markdown(f"**🕵️ {icon} {challenger_name} (Challenge Assumptions):** {entry['content']}")
             elif entry['speaker'].endswith(' [Reviewer]'):
-                # FIXED: Show reviewer responses with proper emoji parsing
+                # Show reviewer responses with emoji parsing
                 reviewer_name = entry['speaker'].replace(' [Reviewer]', '')
                 icon = "🤖" if "GPT-4" in reviewer_name else "🧠" if "Claude" in reviewer_name else "💎"
                 
-                # Parse the review response
                 emoji, content, explanation = parse_reviewer_response(entry['content'])
-                
                 st.markdown(f"**🔍 Review by {icon} {reviewer_name}:** {emoji} {content}")
             else:
                 icon = "🤖" if "GPT-4" in entry['speaker'] else "🧠" if "Claude" in entry['speaker'] else "💎"
                 st.markdown(f"**{icon} {entry['speaker']}:** {entry['content']}")
             st.markdown("---")
     
-    # FIXED: Better organized continue conversation section
+    # Continue conversation section
     if len(st.session_state.conversation_thread) > 1:  # After initial responses
         st.markdown("### 💬 Continue the Conversation")
         
-        # Show steering controls first (clean section)
-        steering_active = show_steering_controls()
-        if steering_active:
-            st.markdown("---")
-        
-        # FIXED: Mode switching with proper state management
-        st.markdown("### 🔄 Choose Response Style")
+        # Mode-specific continuation options
         current_mode = st.session_state.consultation_mode
         
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🏃‍♂️ Quick Follow-up", help="Single model + reviewer response"):
-                st.session_state.follow_up_mode = "quick"
-        with col2:
-            if st.button("🔬 Deep Dive Follow-up", help="All consultants collaborate"):
-                st.session_state.follow_up_mode = "deep"
-        
-        # Show current mode selection
-        intended_mode = st.session_state.get("follow_up_mode", current_mode)
-        if intended_mode == "quick":
-            st.info("**Next response:** Quick Mode - one model answers, another reviews")
+        if current_mode == "quick":
+            st.markdown("Continue in Quick Mode, or ready to go Deep?")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🏃‍♂️ Quick Follow-up", help="Same model + reviewer approach"):
+                    st.session_state.follow_up_mode = "quick"
+            with col2:
+                if st.button("🔬 Switch to Deep Dive", help="All consultants collaborate"):
+                    st.session_state.follow_up_mode = "deep"
+                    st.session_state.consultation_mode = "deep"
         else:
-            st.info("**Next response:** Deep Dive - all three consultants collaborate")
+            st.markdown("**Deep Dive Mode:** All consultants collaborate")
+            
+            # Challenge Assumptions checkbox for Deep Dive only
+            st.checkbox(
+                "Activate **Challenge Assumptions** mode for wider viewpoints?",
+                key="challenge_assumptions_active",
+                help="Uses the 'Eleventh Man' approach - one model questions consensus to prevent groupthink"
+            )
         
         st.markdown("---")
         
-        # FIXED: Follow-up input with proper state management
+        # Pro tip for steering
+        st.markdown("""
+        💡 **Pro tip:** You can steer the conversation by adding requests like:
+        • "Be more direct about this" • "Focus on the core issue here" 
+        • "Go deeper on that last point" • "I need more disagreement on this approach"
+        """)
+        
+        # Follow-up input
         follow_up = st.text_area(
             "Ask a follow-up, share more context, or redirect:",
             placeholder="Examples:\n- Can you be more specific about...\n- That's not quite right - here's what I meant...\n- I like that direction, but what about...\n- You're overcomplicating this - I just need...",
             height=80,
             key=f"followup_{st.session_state.follow_up_counter}",
-            value=""  # Always start with empty input
+            value=""
         )
         
-        # FIXED: Button enabled when text is present
+        # Follow-up processing logic
         follow_up_button_disabled = not follow_up.strip()
         if st.button("💬 Ask Follow-up", disabled=follow_up_button_disabled, key=f"ask_{st.session_state.follow_up_counter}"):
             
@@ -490,11 +507,12 @@ if st.session_state.session_active:
             
             api_keys = {'openai': openai_key, 'anthropic': anthropic_key, 'gemini': gemini_key}
             
-            # FIXED: Use the intended mode, not current mode
+            # Determine intended mode
+            intended_mode = st.session_state.get("follow_up_mode", current_mode)
+            
             if intended_mode == "quick":
                 # Quick Mode: use assigned responder and reviewer
                 if not st.session_state.quick_responder:
-                    # First quick follow-up, need to assign
                     responder, reviewer = assign_quick_mode_roles(selected_model or "GPT-4")
                     st.session_state.quick_responder = responder
                     st.session_state.quick_reviewer = reviewer
@@ -524,19 +542,50 @@ if st.session_state.session_active:
                     })
             
             else:
-                # FIXED: Deep Dive Mode - all models respond
+                # Deep Dive Mode with optional Challenge Assumptions
                 models = ["GPT-4", "Claude", "Gemini"]
                 random.shuffle(models)
                 
-                for model in models:
-                    with st.spinner(f"{model} responding..."):
-                        response = generate_model_response(follow_up, model, api_keys, is_initial=False)
+                if st.session_state.get('challenge_assumptions_active'):
+                    # Challenge Assumptions mode - one model becomes challenger
+                    challenger_model = models.pop()  # Random selection
+                    other_models = models
+                    
+                    # Standard collaborators respond first
+                    for model in other_models:
+                        with st.spinner(f"{model} responding..."):
+                            response = generate_model_response(follow_up, model, api_keys, is_initial=False)
+                            st.session_state.conversation_thread.append({
+                                "speaker": model,
+                                "content": response,
+                                "timestamp": "Follow-up response",
+                                "time": datetime.now()
+                            })
+                    
+                    # Challenger responds last
+                    with st.spinner(f"{challenger_model} challenging assumptions..."):
+                        response = generate_model_response(follow_up, challenger_model, api_keys, is_initial=False, is_challenger=True)
                         st.session_state.conversation_thread.append({
-                            "speaker": model,
+                            "speaker": f"{challenger_model} [Challenge Assumptions]",
                             "content": response,
-                            "timestamp": "Follow-up response",
+                            "timestamp": "Challenger response",
                             "time": datetime.now()
                         })
+                    
+                    # Reset checkbox after use
+                    st.session_state.challenge_assumptions_active = False
+                
+                else:
+                    # Standard Deep Dive - all models respond normally
+                    for model in models:
+                        with st.spinner(f"{model} responding..."):
+                            response = generate_model_response(follow_up, model, api_keys, is_initial=False)
+                            st.session_state.conversation_thread.append({
+                                "speaker": model,
+                                "content": response,
+                                "timestamp": "Follow-up response",
+                                "time": datetime.now()
+                            })
             
             # Clear input and reset state
             st.session_state.follow_up_counter += 1
@@ -546,14 +595,13 @@ if st.session_state.session_active:
     # Session management
     st.markdown("---")
     if st.button("🔄 Start New Consultation"):
-        # Reset session (v15 style)
-        for key in ['conversation_thread', 'session_active', 'round_number', 'follow_up_counter', 'current_follow_up', 'quick_responder', 'quick_reviewer', 'follow_up_mode']:
+        # Reset session
+        for key in ['conversation_thread', 'session_active', 'round_number', 'follow_up_counter', 'current_follow_up', 'quick_responder', 'quick_reviewer', 'follow_up_mode', 'challenge_assumptions_active', 'audio_transcription']:
             if key in st.session_state:
                 del st.session_state[key]
-        clear_steering_command()
         st.rerun()
 
-# Initial responses (v15 direct execution style)
+# Initial responses (direct execution style)
 if st.session_state.session_active and len(st.session_state.conversation_thread) == 1:
     st.markdown("---")
     st.subheader("🎭 AI Consultants Responding")
@@ -594,14 +642,14 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
             "time": datetime.now()
         })
         
-        # FIXED: Display review with proper emoji parsing
+        # Display review with proper emoji parsing
         reviewer_icon = "🤖" if reviewer == "GPT-4" else "🧠" if reviewer == "Claude" else "💎"
         emoji, content, explanation = parse_reviewer_response(review_response)
         st.markdown(f"### 🔍 Review by {reviewer_icon} {reviewer}")
         st.markdown(f"{emoji} {content}")
     
     else:
-        # Deep Dive Mode: All models respond (v15 style)
+        # Deep Dive Mode: All models respond
         models = ["GPT-4", "Claude", "Gemini"]
         random.shuffle(models)
         
@@ -616,16 +664,4 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
                 "time": datetime.now()
             })
             
-            icon = "🤖" if model == "GPT-4" else "🧠" if model == "Claude" else "💎"
-            st.markdown(f"### {icon} {model}")
-            st.markdown(response)
-            
-            # Small delay between responses (v15 style)
-            if i < len(models) - 1:
-                time.sleep(1)
-    
-    st.rerun()
-
-# Footer
-st.markdown("---")
-st.markdown("**Team of Rivals** - Where AI consultants collaborate to solve your toughest challenges 🎭✨")
+            icon = "🤖" if model == "GPT-4" else "🧠" if model == "Claude" else "
