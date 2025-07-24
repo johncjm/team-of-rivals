@@ -664,4 +664,16 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
                 "time": datetime.now()
             })
             
-            icon = "🤖" if model == "GPT-4" else "🧠" if model == "Claude" else "
+            icon = "🤖" if model == "GPT-4" else "🧠" if model == "Claude" else "💎"
+            st.markdown(f"### {icon} {model}")
+            st.markdown(response)
+            
+            # Small delay between responses
+            if i < len(models) - 1:
+                time.sleep(1)
+    
+    st.rerun()
+
+# Footer
+st.markdown("---")
+st.markdown("**Team of Rivals** - Where AI consultants collaborate to solve your toughest challenges 🎭✨")
