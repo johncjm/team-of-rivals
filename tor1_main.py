@@ -573,7 +573,8 @@ if st.session_state.session_active:
                         })
                     
                     # Reset checkbox after use
-                    st.session_state.challenge_assumptions_active = False
+                    if 'challenge_assumptions_active' in st.session_state:
+                       del st.session_state.challenge_assumptions_active
                 
                 else:
                     # Standard Deep Dive - all models respond normally
