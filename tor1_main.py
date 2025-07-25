@@ -1,4 +1,4 @@
-# tor1_main.py - Pre-Beta Version with UI Fixes
+# tor1_main.py - Pre-Beta Version - Fix #1: Challenge Assumptions Mode
 # Team of Rivals: Complete implementation with Challenge Assumptions + UI improvements
 
 import streamlit as st
@@ -12,7 +12,7 @@ import random
 from typing import Dict, List, Optional
 from datetime import datetime
 
-# Configure page 
+# Configure page
 st.set_page_config(
     page_title="Team of Rivals", 
     page_icon="🎭",
@@ -197,7 +197,7 @@ def call_anthropic(prompt, api_key):
         return f"[Claude temporarily unavailable: {str(e)[:50]}...]"
 
 def call_gemini(prompt, api_key):
-    """Call Google Gemini API"""
+    """Google Gemini API"""
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-pro')
@@ -314,14 +314,11 @@ def parse_reviewer_response(response: str) -> tuple:
 # Callback function for enabling button
 def update_input_text():
     st.session_state.input_text = st.session_state.problem_input
-    # PART 2: UI and Main Application Logic
-# This goes directly after Part 1
-
-# Main UI with new text and layout
+    # Main UI with new text and layout
 st.title("🎭 Team of Rivals")
 st.markdown("*Let ChatGPT, Claude and Gemini collaborate to answer your questions or dig into your toughest challenges*")
 
-# Sidebar with comprehensive explanation (wider)
+# Sidebar with comprehensive explanation (standard width)
 with st.sidebar:
     st.markdown("### How Team of Rivals Works")
     st.markdown("""
@@ -501,6 +498,10 @@ if st.session_state.session_active:
         • "Go deeper on that last point" • "I need more disagreement on this approach"
         """)
         
+        # =================================================================
+        # FIX #1: CHALLENGE ASSUMPTIONS MODE - FIXED SECTION BEGINS HERE
+        # =================================================================
+        
         # Follow-up processing logic
         follow_up_button_disabled = not follow_up.strip()
         if st.button("💬 Ask Follow-up", disabled=follow_up_button_disabled, key=f"ask_{st.session_state.follow_up_counter}"):
@@ -554,6 +555,10 @@ if st.session_state.session_active:
                 models = ["GPT-4", "Claude", "Gemini"]
                 random.shuffle(models)
                 
+                # DEBUG: Add this temporarily to verify challenge_active is being read
+                if challenge_active:
+                    st.info(f"🔍 DEBUG: Challenge mode activated! Models: {models}")
+                
                 if challenge_active:
                     # Challenge Assumptions mode - one model becomes challenger
                     challenger_model = models.pop()  # Random selection
@@ -570,7 +575,7 @@ if st.session_state.session_active:
                                 "time": datetime.now()
                             })
                     
-                    # Challenger responds last
+                    # Challenger responds last with special prompt
                     with st.spinner(f"{challenger_model} challenging assumptions..."):
                         response = generate_model_response(follow_up, challenger_model, api_keys, is_initial=False, is_challenger=True)
                         st.session_state.conversation_thread.append({
@@ -596,6 +601,10 @@ if st.session_state.session_active:
             st.session_state.follow_up_counter += 1
             st.session_state.follow_up_mode = None  # Reset mode selection
             st.rerun()
+        
+        # =================================================================
+        # FIX #1: CHALLENGE ASSUMPTIONS MODE - FIXED SECTION ENDS HERE
+        # =================================================================
     
     # Session management (MOVED TO BOTTOM)
     st.markdown("---")
