@@ -1,5 +1,5 @@
-# tor1_main.py - Pre-Beta Version with Challenge Assumptions Mode
-# Team of Rivals: Complete implementation with Eleventh Man, UI revamp, Whisper restoration
+# tor1_main.py - Pre-Beta Version with UI Fixes
+# Team of Rivals: Complete implementation with Challenge Assumptions + UI improvements
 
 import streamlit as st
 import google.generativeai as genai
@@ -12,12 +12,25 @@ import random
 from typing import Dict, List, Optional
 from datetime import datetime
 
-# Configure page
+# Configure page with wider sidebar
 st.set_page_config(
     page_title="Team of Rivals", 
     page_icon="🎭",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
+
+# CSS for wider sidebar
+st.markdown("""
+<style>
+    .css-1d391kg {
+        width: 400px;
+    }
+    .css-1cypcdb {
+        max-width: 400px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Initialize session state
 if 'conversation_thread' not in st.session_state:
@@ -38,9 +51,9 @@ if 'quick_reviewer' not in st.session_state:
     st.session_state.quick_reviewer = None
 if 'audio_transcription' not in st.session_state:
     st.session_state.audio_transcription = ""
-# Challenge Assumptions mode
-if 'challenge_assumptions_active' not in st.session_state:
-    st.session_state.challenge_assumptions_active = False
+# UI state for button enabling
+if 'input_text' not in st.session_state:
+    st.session_state.input_text = ""
 
 # Load API keys
 try:
@@ -309,14 +322,18 @@ def parse_reviewer_response(response: str) -> tuple:
     
     # Fallback - return whole response
     return "🔍", response, ""
+
+# Callback function for enabling button
+def update_input_text():
+    st.session_state.input_text = st.session_state.problem_input
     # PART 2: UI and Main Application Logic
-# This goes directly after Part 1 (no additional imports needed)
+# This goes directly after Part 1
 
 # Main UI with new text and layout
 st.title("🎭 Team of Rivals")
 st.markdown("*Let ChatGPT, Claude and Gemini collaborate to answer your questions or dig into your toughest challenges*")
 
-# Sidebar with comprehensive explanation
+# Sidebar with comprehensive explanation (wider)
 with st.sidebar:
     st.markdown("### How Team of Rivals Works")
     st.markdown("""
@@ -384,12 +401,13 @@ if audio_input is not None and api_available:
             with st.expander("📝 What I heard", expanded=True):
                 st.write(transcription)
 
-# Text input
+# Text input with auto-enabling callback
 user_problem = st.text_area(
     "Or type your challenge here:",
     placeholder="Examples:\n- I have some Python code that feels messy\n- Need help planning a difficult team conversation\n- Trying to decide between two strategic directions\n- Working on a presentation that isn't clicking\n\nDon't worry about being perfectly clear - they'll ask questions!",
     height=120,
-    key="problem_input"
+    key="problem_input",
+    on_change=update_input_text
 )
 
 # Combine inputs
@@ -402,7 +420,7 @@ if st.session_state.audio_transcription and not st.session_state.audio_transcrip
     else:
         combined_input = st.session_state.audio_transcription
 
-# Start consultation button
+# Start consultation button (auto-enabled)
 button_disabled = not combined_input.strip() or not api_available
 if st.button("🚀 Start AI Consultation", disabled=button_disabled):
     
@@ -425,7 +443,7 @@ if st.session_state.session_active:
     st.markdown("---")
     st.subheader("💬 Consultation in Progress")
     
-    # Show conversation thread
+    # Show conversation thread (preserved throughout)
     for entry in st.session_state.conversation_thread:
         with st.container():
             if entry['speaker'] == 'User':
@@ -447,7 +465,7 @@ if st.session_state.session_active:
                 st.markdown(f"**{icon} {entry['speaker']}:** {entry['content']}")
             st.markdown("---")
     
-    # Continue conversation section
+    # Continue conversation section (IMPROVED LAYOUT)
     if len(st.session_state.conversation_thread) > 1:  # After initial responses
         st.markdown("### 💬 Continue the Conversation")
         
@@ -467,24 +485,10 @@ if st.session_state.session_active:
                     st.session_state.consultation_mode = "deep"
         else:
             st.markdown("**Deep Dive Mode:** All consultants collaborate")
-            
-            # Challenge Assumptions checkbox for Deep Dive only
-            st.checkbox(
-                "Activate **Challenge Assumptions** mode for wider viewpoints?",
-                key="challenge_assumptions_active",
-                help="Uses the 'Eleventh Man' approach - one model questions consensus to prevent groupthink"
-            )
         
         st.markdown("---")
         
-        # Pro tip for steering
-        st.markdown("""
-        💡 **Pro tip:** You can steer the conversation by adding requests like:
-        • "Be more direct about this" • "Focus on the core issue here" 
-        • "Go deeper on that last point" • "I need more disagreement on this approach"
-        """)
-        
-        # Follow-up input
+        # Follow-up input (REORDERED - now before Challenge Assumptions)
         follow_up = st.text_area(
             "Ask a follow-up, share more context, or redirect:",
             placeholder="Examples:\n- Can you be more specific about...\n- That's not quite right - here's what I meant...\n- I like that direction, but what about...\n- You're overcomplicating this - I just need...",
@@ -492,6 +496,22 @@ if st.session_state.session_active:
             key=f"followup_{st.session_state.follow_up_counter}",
             value=""
         )
+        
+        # Challenge Assumptions checkbox (now below input)
+        challenge_active = False
+        if st.session_state.consultation_mode == "deep":
+            challenge_active = st.checkbox(
+                "Activate **Challenge Assumptions** mode for wider viewpoints?",
+                key=f"challenge_assumptions_{st.session_state.follow_up_counter}",
+                help="Uses the 'Eleventh Man' approach - one model questions consensus to prevent groupthink"
+            )
+        
+        # Pro tip for steering (stays below)
+        st.markdown("""
+        💡 **Pro tip:** You can steer the conversation by adding requests like:
+        • "Be more direct about this" • "Focus on the core issue here" 
+        • "Go deeper on that last point" • "I need more disagreement on this approach"
+        """)
         
         # Follow-up processing logic
         follow_up_button_disabled = not follow_up.strip()
@@ -546,7 +566,7 @@ if st.session_state.session_active:
                 models = ["GPT-4", "Claude", "Gemini"]
                 random.shuffle(models)
                 
-                if st.session_state.get('challenge_assumptions_active'):
+                if challenge_active:
                     # Challenge Assumptions mode - one model becomes challenger
                     challenger_model = models.pop()  # Random selection
                     other_models = models
@@ -571,10 +591,6 @@ if st.session_state.session_active:
                             "timestamp": "Challenger response",
                             "time": datetime.now()
                         })
-                    
-                    # Reset checkbox after use
-                    if 'challenge_assumptions_active' in st.session_state:
-                       del st.session_state.challenge_assumptions_active
                 
                 else:
                     # Standard Deep Dive - all models respond normally
@@ -588,16 +604,16 @@ if st.session_state.session_active:
                                 "time": datetime.now()
                             })
             
-            # Clear input and reset state
+            # Clear input and reset state (fixed counter approach)
             st.session_state.follow_up_counter += 1
             st.session_state.follow_up_mode = None  # Reset mode selection
             st.rerun()
     
-    # Session management
+    # Session management (MOVED TO BOTTOM)
     st.markdown("---")
     if st.button("🔄 Start New Consultation"):
         # Reset session
-        for key in ['conversation_thread', 'session_active', 'round_number', 'follow_up_counter', 'current_follow_up', 'quick_responder', 'quick_reviewer', 'follow_up_mode', 'challenge_assumptions_active', 'audio_transcription']:
+        for key in ['conversation_thread', 'session_active', 'round_number', 'follow_up_counter', 'current_follow_up', 'quick_responder', 'quick_reviewer', 'follow_up_mode', 'audio_transcription', 'input_text']:
             if key in st.session_state:
                 del st.session_state[key]
         st.rerun()
