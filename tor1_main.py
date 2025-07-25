@@ -469,7 +469,15 @@ if st.session_state.session_active:
                     st.session_state.follow_up_mode = "deep"
                     st.session_state.consultation_mode = "deep"
         else:
-            st.markdown("**Deep Dive Mode:** All consultants collaborate")
+                st.markdown("**Deep Dive Mode:** All consultants collaborate")
+
+                # Add Quick Mode option for flexibility
+                col1, col2 = st.columns(2)
+                with col1:
+                   st.markdown("")  # Empty space for alignment
+                with col2:
+                   if st.button("🏃‍♂️ Switch to Quick Mode", help="Faster single answer + review"):
+                       st.session_state.follow_up_mode = "quick"
         
         st.markdown("---")
         
