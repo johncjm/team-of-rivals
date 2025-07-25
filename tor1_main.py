@@ -320,27 +320,43 @@ st.markdown("*Let ChatGPT, Claude and Gemini collaborate to answer your question
 
 # Sidebar with comprehensive explanation (standard width)
 with st.sidebar:
-    st.markdown("### How Team of Rivals Works")
-    st.markdown("""
-    Are four heads (yours plus 3 LLMs) better than one? We think so, and we've built this app to try to find out!
-
-    Are you tired of asking an AI bot a simple question and not being sure how much to trust the answer? In Quick Mode, one model gives an answer and another model checks it out for you.
-
-    In Deep Dive Mode, all three models work together, first in a Listen & Learn phase to scope out your issue, whether it's a coding question or understanding why your screenplay isn't coming together. Then they switch to Build, Execute & Check, pooling their ideas and challenging each other's thinking to come up with your best path forward.
-
-    Could you do the same with a lot of copy and pasting? Yes, kinda! But besides cutting way down on that work, Team of Rivals includes prompt engineering developed in collaboration with the models themselves to mitigate their quirks and maximize their usefulness. Hallucinations? Sycophancy? We can't guarantee they'll go away, but we think you're on a better path than working with a bot in the wild.
-
-    As you work, you'll get suggestions for how to steer the discussion in the direction you want. And for a Deep Dive, you can activate "Challenge Assumptions" mode, in which one model is asked to be the fresh eye questioning assumptions and looking for weaknesses in proposed solutions.
-
-    **For the best results, be an active participant, not a passive listener:**
-
-    • **Speak freely** - ramble, think out loud, contradict yourself, especially if using audio for the initial input. That's how real insights emerge.
-    • **Push back** if the discussion seems off track or missing something important.
-    • **Ask follow-ups** when you want them to dig deeper or explore different angles.
-    • **Don't worry about structure** - the consultants will help organize and focus the discussion.
-
-    **Remember:** The best consultations happen when you stay engaged and guide the conversation toward what you actually need!
-    """)
+    st.markdown("### Team of Rivals: Are Three Heads Better Than One?")
+    st.markdown("We think so. This app tests that theory by putting you together with the world's top AI tools — ChatGPT, Claude and Gemini. Tired of uncertain AI answers? Try a new approach.")
+    
+    st.markdown("**Choose Your Mode:**")
+    st.markdown("Quick Mode: One model answers, another checks. Like a built-in fact-checker, minus the coffee breaks.")
+    with st.expander("Tell me more"):
+        st.markdown("Need answers promptly? Quick Mode is like having a knowledgeable colleague always at hand — and another one to make sure the first is on track! It's fast, efficient, and if you need to go deeper, Deep Dive is a click away.")
+    
+    st.markdown("Deep Dive: Three models collaborate. They understand your issue, then brainstorm solutions. A digital roundtable, with less arguing over donuts.")
+    with st.expander("How it works"):
+        st.markdown("Got a complex conundrum? Dive into Deep Dive mode where three AI models put their heads together. First they Listen & Learn, asking probing questions, and sometime challenging your assumptions. Then they switch to Build, Execute and Check — coming up with solutions and backstopping each other. It's an experiment in digital collaboration—we're still testing the waters, but the process itself can be illuminating.")
+    
+    st.markdown("**AI Teamwork Benefits:**")
+    st.markdown("Error Reduction: Multiple AIs catch more mistakes. Not perfect, but better.")
+    with st.expander("Learn more"):
+        st.markdown("Our AI models work together to catch errors and inconsistencies, much like a team of dedicated proofreaders. While no system is perfect, this collaborative approach significantly reduces the likelihood of inaccuracies.")
+    
+    st.markdown("Idea Synthesis: Diverse perspectives lead to nuanced solutions.")
+    with st.expander("See it in action"):
+        st.markdown("Imagine a roundtable of AI consultants brainstorming solutions to your problem. By combining their diverse perspectives and expertise, they can often generate more creative and nuanced solutions than any single AI could achieve alone.")
+    
+    st.markdown("You're in Charge: Capable AI team, but you call the shots.")
+    with st.expander("Learn to direct"):
+        st.markdown("You're not just a passive observer; you're the director of this AI-powered think tank. Your feedback, questions, and insights guide the models towards the most relevant and helpful outcomes. You're in control of the process.")
+    
+    st.markdown("**Getting the Most Out of This Tool:**")
+    st.markdown("Be Sharp or Be Fuzzy: Specific instructions are great, but for getting started sometimes exploratory rambling is more effective. Our audio input lets you talk through a problem, like free-associating with a highly attentive colleague.")
+    with st.expander("Effective prompting tips"):
+        st.markdown("While specific prompts often work best, our audio input recognizes that sometimes exploratory rambling uncovers complex issues. Like a newspaper editor encouraging a reporter to free-associate, talking through a problem can surface hidden insights. Use clear prompts when possible, but don't hesitate to think out loud for thornier issues.")
+    
+    st.markdown("You're in Charge: Think of AI as a brilliant intern—lots of potential, but still learning. Your critical thinking is essential.")
+    with st.expander("Understanding AI limitations"):
+        st.markdown("AI is a rapidly evolving technology, but it's not magic. Our models are constantly learning, but they can still make mistakes or exhibit biases. Your critical thinking skills are essential for evaluating the information provided and ensuring responsible use of AI.")
+    
+    st.markdown("Join the Experiment: We're testing multi-AI collaboration. Your feedback helps shape its evolution.")
+    with st.expander("Feedback & Beta Program"):
+        st.markdown("We're in the early stages of exploring collaborative AI potential. Your feedback shapes this technology's future. Join our beta program to be part of this journey, but remember: this is an experiment. Results may vary, and we're learning alongside you.")
 
 st.markdown("---")
 
