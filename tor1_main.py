@@ -324,29 +324,29 @@ with st.sidebar:
     st.markdown("We think so. This app tests that theory by putting you together with the world's top AI tools — ChatGPT, Claude and Gemini. Tired of uncertain AI answers? Try a new approach.")
     
     st.markdown("**Choose Your Mode:**")
-    st.markdown("Quick Mode: One model answers, another checks. Like a built-in fact-checker, minus the coffee breaks.")
+    st.markdown("Quick Mode: One model answers, another checks.")
     with st.expander("Tell me more"):
-        st.markdown("Need answers promptly? Quick Mode is like having a knowledgeable colleague always at hand — and another one to make sure the first is on track! It's fast, efficient, and if you need to go deeper, Deep Dive is a click away.")
+        st.markdown("Need answers promptly? Quick Mode is like having a smart researcher always at hand — and another one to make sure the first isn't making something up! And if you need to go deeper, Deep Dive is a click away.")
     
-    st.markdown("Deep Dive: Three models collaborate. They understand your issue, then brainstorm solutions. A digital roundtable, with less arguing over donuts.")
+    st.markdown("Deep Dive: Three models collaborate. They dig into your issue, then brainstorm solutions. A digital roundtable, with egos checked at the door.")
     with st.expander("How it works"):
-        st.markdown("Got a complex conundrum? Dive into Deep Dive mode where three AI models put their heads together. First they Listen & Learn, asking probing questions, and sometime challenging your assumptions. Then they switch to Build, Execute and Check — coming up with solutions and backstopping each other. It's an experiment in digital collaboration—we're still testing the waters, but the process itself can be illuminating.")
+        st.markdown("Got a complex conundrum? In Deep Dive mode, the three AI models put their heads together. First they Listen & Learn, asking probing questions and sometimes challenging your assumptions. Then they switch to Build, Execute and Check — coming up with solutions and backstopping each other. It's an experiment in digital collaboration — we're still testing the waters, but the process itself can be illuminating.")
     
     st.markdown("**AI Teamwork Benefits:**")
-    st.markdown("Error Reduction: Multiple AIs catch more mistakes. Not perfect, but better.")
+    st.markdown("Error Reduction: Multiple AIs catch more mistakes or hallucinations. Not perfect, but better.")
     with st.expander("Learn more"):
         st.markdown("Our AI models work together to catch errors and inconsistencies, much like a team of dedicated proofreaders. While no system is perfect, this collaborative approach significantly reduces the likelihood of inaccuracies.")
     
     st.markdown("Idea Synthesis: Diverse perspectives lead to nuanced solutions.")
     with st.expander("See it in action"):
-        st.markdown("Imagine a roundtable of AI consultants brainstorming solutions to your problem. By combining their diverse perspectives and expertise, they can often generate more creative and nuanced solutions than any single AI could achieve alone.")
+        st.markdown("Imagine a roundtable of AI consultants brainstorming solutions to your problem. By combining their diverse perspectives and expertise, they can often generate more creative and nuanced solutions than any single AI could achieve alone. An optional Challenge Assumptions mode can make sure ideas are tested in a constructive way.")
     
     st.markdown("You're in Charge: Capable AI team, but you call the shots.")
     with st.expander("Learn to direct"):
-        st.markdown("You're not just a passive observer; you're the director of this AI-powered think tank. Your feedback, questions, and insights guide the models towards the most relevant and helpful outcomes. You're in control of the process.")
+        st.markdown("You're not just a passive observer; you're running this AI-powered think tank. Your feedback, questions, and insights guide the models towards the most relevant and helpful outcomes. You're in control of the process.")
     
     st.markdown("**Getting the Most Out of This Tool:**")
-    st.markdown("Be Sharp or Be Fuzzy: Specific instructions are great, but for getting started sometimes exploratory rambling is more effective. Our audio input lets you talk through a problem, like free-associating with a highly attentive colleague.")
+    st.markdown("Be Sharp - or Fuzzy: Specific instructions can help hone AI models' output, but for getting started sometimes exploratory rambling is more effective. Our audio input lets you talk through a problem, like free-associating with a highly attentive colleague.")
     with st.expander("Effective prompting tips"):
         st.markdown("While specific prompts often work best, our audio input recognizes that sometimes exploratory rambling uncovers complex issues. Like a newspaper editor encouraging a reporter to free-associate, talking through a problem can surface hidden insights. Use clear prompts when possible, but don't hesitate to think out loud for thornier issues.")
     
@@ -358,7 +358,21 @@ with st.sidebar:
     with st.expander("Feedback & Beta Program"):
         st.markdown("We're in the early stages of exploring collaborative AI potential. Your feedback shapes this technology's future. Join our beta program to be part of this journey, but remember: this is an experiment. Results may vary, and we're learning alongside you.")
 
-st.markdown("---")
+    st.markdown("---")
+    st.markdown("**Beta Feedback**")
+    
+    feedback = st.text_area(
+        "How's it working? What would you change?",
+        placeholder="Share your thoughts: What worked well? What was confusing? What features would you want?",
+        height=80,
+        key="beta_feedback"
+    )
+    
+    if st.button("Send Feedback", disabled=not feedback.strip()):
+        # Simple display - you can enhance this later
+        st.success("Thanks! Feedback noted.")
+        st.info(f"**Feedback:** {feedback}")
+        # TODO: Later you could email this to yourself or save to a file
 
 # Consultation mode selection
 st.subheader("🎯 Choose Your Consultation Style")
@@ -578,11 +592,7 @@ if st.session_state.session_active:
                 # Deep Dive Mode with optional Challenge Assumptions
                 models = ["GPT-4", "Claude", "Gemini"]
                 random.shuffle(models)
-                
-                # DEBUG: Add this temporarily to verify challenge_active is being read
-                if challenge_active:
-                    st.info(f"🔍 DEBUG: Challenge mode activated! Models: {models}")
-                
+                      
                 if challenge_active:
                     # Challenge Assumptions mode - one model becomes challenger
                     challenger_model = models.pop()  # Random selection
