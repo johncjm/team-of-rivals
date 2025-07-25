@@ -12,7 +12,7 @@ import random
 from typing import Dict, List, Optional
 from datetime import datetime
 
-# Configure page with wider sidebar
+# Configure page 
 st.set_page_config(
     page_title="Team of Rivals", 
     page_icon="🎭",
