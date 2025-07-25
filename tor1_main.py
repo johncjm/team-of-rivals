@@ -20,14 +20,25 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS for wider sidebar
+# CSS for wider sidebar - Updated for Streamlit 1.47.0
 st.markdown("""
 <style>
-    .css-1d391kg {
-        width: 400px;
+    /* Wider sidebar for better content display */
+    .css-1d391kg, .css-1cypcdb, .st-emotion-cache-16txtl3, .eczjsme0 {
+        width: 400px !important;
+        max-width: 400px !important;
     }
-    .css-1cypcdb {
-        max-width: 400px;
+    
+    /* Alternative approach - target sidebar container */
+    section[data-testid="stSidebar"] > div {
+        width: 400px !important;
+        max-width: 400px !important;
+    }
+    
+    /* Ensure main content adjusts */
+    .main .block-container {
+        max-width: calc(100% - 420px) !important;
+        margin-left: 420px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -369,6 +380,24 @@ consultation_mode = st.radio(
 )
 
 st.session_state.consultation_mode = "quick" if "Quick" in consultation_mode else "deep"
+# DEBUG SECTION - Remove after fixing
+with st.expander("🔧 Debug Info (remove after testing)"):
+    st.write("**Streamlit Version:**", st.__version__)
+    st.write("**Session State Keys:**", list(st.session_state.keys()))
+    st.write("**Consultation Mode:**", st.session_state.consultation_mode)
+    st.write("**Session Active:**", st.session_state.session_active)
+    st.write("**Audio Transcription:**", st.session_state.audio_transcription[:100] + "..." if len(st.session_state.audio_transcription) > 100 else st.session_state.audio_transcription)
+    
+    # Test the CSS
+    st.markdown("**CSS Test:** This sidebar should be 400px wide")
+    
+    # Test button state
+    if 'user_problem' in locals():
+        st.write("**Current problem input:**", repr(user_problem))
+    else:
+        st.write("**Current problem input:** Not defined yet")
+    
+st.markdown("---")
 
 # Model selection for Quick Mode
 if st.session_state.consultation_mode == "quick":
