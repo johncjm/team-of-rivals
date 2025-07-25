@@ -20,25 +20,25 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS for wider sidebar - Updated for Streamlit 1.47.0
+# CSS for wider sidebar - Fixed version
 st.markdown("""
 <style>
-    /* Wider sidebar for better content display */
-    .css-1d391kg, .css-1cypcdb, .st-emotion-cache-16txtl3, .eczjsme0 {
-        width: 400px !important;
-        max-width: 400px !important;
-    }
-    
-    /* Alternative approach - target sidebar container */
+    /* Wider sidebar */
     section[data-testid="stSidebar"] > div {
         width: 400px !important;
-        max-width: 400px !important;
+        min-width: 400px !important;
     }
     
-    /* Ensure main content adjusts */
-    .main .block-container {
-        max-width: calc(100% - 420px) !important;
-        margin-left: 420px !important;
+    /* Adjust main content to not overlap */
+    .main > div {
+        padding-left: 420px !important;
+    }
+    
+    /* Alternative approach for main content */
+    .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
