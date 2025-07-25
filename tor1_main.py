@@ -20,29 +20,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS for wider sidebar - Fixed version
-st.markdown("""
-<style>
-    /* Wider sidebar */
-    section[data-testid="stSidebar"] > div {
-        width: 400px !important;
-        min-width: 400px !important;
-    }
-    
-    /* Adjust main content to not overlap */
-    .main > div {
-        padding-left: 420px !important;
-    }
-    
-    /* Alternative approach for main content */
-    .block-container {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        max-width: none !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # Initialize session state
 if 'conversation_thread' not in st.session_state:
     st.session_state.conversation_thread = []
@@ -380,24 +357,6 @@ consultation_mode = st.radio(
 )
 
 st.session_state.consultation_mode = "quick" if "Quick" in consultation_mode else "deep"
-# DEBUG SECTION - Remove after fixing
-with st.expander("🔧 Debug Info (remove after testing)"):
-    st.write("**Streamlit Version:**", st.__version__)
-    st.write("**Session State Keys:**", list(st.session_state.keys()))
-    st.write("**Consultation Mode:**", st.session_state.consultation_mode)
-    st.write("**Session Active:**", st.session_state.session_active)
-    st.write("**Audio Transcription:**", st.session_state.audio_transcription[:100] + "..." if len(st.session_state.audio_transcription) > 100 else st.session_state.audio_transcription)
-    
-    # Test the CSS
-    st.markdown("**CSS Test:** This sidebar should be 400px wide")
-    
-    # Test button state
-    if 'user_problem' in locals():
-        st.write("**Current problem input:**", repr(user_problem))
-    else:
-        st.write("**Current problem input:** Not defined yet")
-    
-st.markdown("---")
 
 # Model selection for Quick Mode
 if st.session_state.consultation_mode == "quick":
