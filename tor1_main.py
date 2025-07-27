@@ -1,5 +1,5 @@
-# tor1_main.py - Web Search Implementation
-# Team of Rivals: Complete implementation with Challenge Assumptions + Web Search
+# tor1_main.py - Pre-Beta Version - Fix #1: Challenge Assumptions Mode
+# Team of Rivals: Complete implementation with Challenge Assumptions + UI improvements
 
 import streamlit as st
 import google.generativeai as genai
@@ -9,8 +9,6 @@ import re
 import json
 import time
 import random
-import requests
-from urllib.parse import quote
 from typing import Dict, List, Optional
 from datetime import datetime
 
@@ -50,14 +48,12 @@ try:
     gemini_key = st.secrets["GOOGLE_API_KEY"]
     openai_key = st.secrets["OPENAI_API_KEY"] 
     anthropic_key = st.secrets["ANTHROPIC_API_KEY"]
-    google_search_key = st.secrets["GOOGLE_SEARCH_API_KEY"]
-    google_cse_id = st.secrets["GOOGLE_CSE_ID"]
     api_available = True
 except Exception as e:
     st.error(f"API keys not configured: {e}")
     api_available = False
 
-# Enhanced conversation guidelines
+# Enhanced conversation guidelines from v15
 CONVERSATION_GUIDELINES = """
 **Team of Rivals Conversation Guidelines:**
 
@@ -94,79 +90,33 @@ Remember: You're not alone - your collaborators will step up and challenge you i
 IMPORTANT: Never respond as if you are another model. Each model speaks only for themselves in collaborative discussions.
 """
 
-# Quick Mode Reviewer Guidelines with Search
-REVIEWER_GUIDELINES_WITH_SEARCH = """
-Your role is to help users assess how much they can rely on the primary response, enhanced with web search capabilities. Think of yourself as their research assistant with access to current information.
-
-**Your process:**
-1. Evaluate the primary response for factual claims that may need verification
-2. Conduct web search when you encounter information that is:
-   - Time-sensitive or potentially outdated
-   - Specific factual claims (names, dates, statistics, locations)
-   - Complex topics that could benefit from current context
-3. Provide your reliability assessment
+# Quick Mode Reviewer Guidelines
+REVIEWER_GUIDELINES = """
+Your role is to help users assess how much they can rely on the primary response. Think of yourself as their research assistant, spotting elements that deserve caution or further verification.
 
 **Start your response with a reliability assessment emoji:**
 • 🟢 if the information looks reliable and you don't see significant concerns
 • 🟡 if it's useful but worth verifying some points or adding context
 • 🔴 if there are significant issues or the user should approach with caution
 
-**After web search (when conducted):**
-- Update your reliability assessment based on search findings
-- Clearly indicate when you've verified or corrected information using web search
-- Use phrases like "According to recent data..." or "My research confirms/contradicts..."
+**After the emoji, explain your assessment in 1-2 sentences. Examples:**
+
+🟢 This covers the key points well - the approaches mentioned are standard best practices, and the specific suggestions are appropriate for this type of project.
+
+🟡 Good framework, but this doesn't address the transition process for current visiting students - you'll want to contact admissions about simplified procedures for your specific situation.
+
+🔴 Several specific claims here need verification. The 2025 salary projections don't specify data sources, and the market predictions assume stable economic conditions.
 
 **What to look for:**
 - Claims that seem uncertain or hard to verify
 - Missing context that could change conclusions  
 - Assumptions that might not hold in all cases
-- Areas where current information would be valuable
-- Information that contradicts what you found through search
+- Areas where the user should do additional research
+- Information that contradicts what you know (share your perspective for comparison)
 
-Your goal is to put the user in a better position to assess the response using both analysis and current information.
+Your goal is to put the user in a better position to assess the response. Focus on being helpful - whether that's flagging concerns or confirming the response looks solid.
 
-IMPORTANT: Never respond as if you are another model. You are providing your own independent review enhanced with web research.
-"""
-
-# Gemini Deep Mode Guidelines
-GEMINI_DEEP_MODE_GUIDELINES = """
-**Your Role: Primary Researcher and Foundation-Setter**
-
-You are the first responder in Deep Dive mode, tasked with providing a research-informed foundation for the discussion.
-
-**Your process:**
-1. Analyze the user's query for factual elements that would benefit from current information
-2. Conduct targeted web searches when the query involves:
-   - Current events, recent developments, or time-sensitive information
-   - Specific factual claims that need verification
-   - Complex topics where multiple perspectives would be valuable
-3. Present your findings as a foundation for deeper analysis by your colleagues
-
-**How to present search findings:**
-- Synthesize search results with your own analysis - don't just summarize
-- Offer multiple perspectives when relevant, highlighting key facts
-- Leave room for further analysis by clearly indicating areas that warrant deeper exploration
-- Use clear indicators when information comes from web search: "Recent reports suggest..." "Current data indicates..."
-
-**Your goal:** Provide an informed starting point that enhances rather than constrains the collaborative discussion.
-
-**Collaboration focus:** Your colleagues will build upon your research-informed foundation with their own analysis and insights. Present information in a way that invites further exploration rather than closing off discussion.
-
-IMPORTANT: Never respond as if you are another model. You are providing your own research-enhanced perspective to start the collaborative analysis.
-"""
-
-# Enhanced Deep Mode Guidelines for GPT-4 and Claude
-DEEP_MODE_ENHANCED_GUIDELINES = """
-**DEEP DIVE MODE - Collaborative Analysis with Research Foundation:**
-• Build upon Gemini's research-informed foundation with your own analysis and insights
-• Use search findings as a springboard for deeper exploration, not as constraints
-• When your analysis differs from search results, explain your reasoning clearly
-• Bring in relevant knowledge and perspectives not covered in the search results
-• Focus on implications, connections, and strategic analysis beyond the immediate facts
-• Briefly acknowledge when building directly on Gemini's research, but integrate naturally
-• Apply critical thinking to all information, including search results
-
-**Key principle:** Use the research foundation to enhance your analysis while maintaining your independent perspective and expertise.
+IMPORTANT: Never respond as if you are another model. You are providing your own independent review.
 """
 
 # Challenge Assumptions (Eleventh Man) Guidelines
@@ -190,83 +140,7 @@ Remember: You are a vital part of the team. Your job is to ensure that the group
 IMPORTANT: Never respond as if you are another model. You are providing your own independent challenge to the group's thinking.
 """
 
-# Web search functions
-def perform_web_search(query: str, num_results: int = 5) -> dict:
-    """
-    Perform a Google Custom Search and return results
-    """
-    try:
-        search_url = "https://www.googleapis.com/customsearch/v1"
-        params = {
-            'key': google_search_key,
-            'cx': google_cse_id,
-            'q': query,
-            'num': num_results
-        }
-        
-        response = requests.get(search_url, params=params, timeout=10)
-        response.raise_for_status()
-        
-        search_data = response.json()
-        
-        # Extract useful information
-        results = []
-        if 'items' in search_data:
-            for item in search_data['items']:
-                results.append({
-                    'title': item.get('title', ''),
-                    'link': item.get('link', ''),
-                    'snippet': item.get('snippet', ''),
-                    'displayLink': item.get('displayLink', '')
-                })
-        
-        return {
-            'success': True,
-            'results': results,
-            'total_results': search_data.get('searchInformation', {}).get('totalResults', '0')
-        }
-        
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"Search failed: {str(e)[:100]}...",
-            'results': []
-        }
-
-def format_search_results_for_prompt(search_data: dict) -> str:
-    """
-    Format search results for inclusion in model prompts
-    """
-    if not search_data['success'] or not search_data['results']:
-        return "Web search was unavailable or returned no results."
-    
-    formatted_results = "Recent web search findings:\n\n"
-    
-    for i, result in enumerate(search_data['results'][:5], 1):
-        formatted_results += f"{i}. {result['title']}\n"
-        formatted_results += f"   Source: {result['displayLink']}\n"
-        formatted_results += f"   Summary: {result['snippet']}\n"
-        formatted_results += f"   Link: {result['link']}\n\n"
-    
-    return formatted_results
-
-def extract_search_query(user_input: str, conversation_context: str) -> str:
-    """
-    Extract relevant search terms from user input and context
-    """
-    query = user_input.strip()
-    
-    # Remove common conversational elements
-    query = query.replace("Can you", "").replace("Please", "").replace("I need", "")
-    query = query.replace("help me", "").replace("tell me", "").strip()
-    
-    # Limit query length for API
-    if len(query) > 100:
-        query = query[:100]
-    
-    return query
-
-# Audio transcription function
+# Audio transcription function (restored from v15)
 def transcribe_audio(audio_bytes, api_key):
     """Transcribe audio using OpenAI Whisper"""
     try:
@@ -322,41 +196,26 @@ def call_anthropic(prompt, api_key):
     except Exception as e:
         return f"[Claude temporarily unavailable: {str(e)[:50]}...]"
 
-def call_gemini_with_search(prompt, api_key, search_query=None):
-    """
-    Call Gemini API with optional web search integration
-    """
+def call_gemini(prompt, api_key):
+    """Google Gemini API"""
     try:
-        # Perform web search if query provided
-        search_results = ""
-        if search_query:
-            search_data = perform_web_search(search_query)
-            search_results = format_search_results_for_prompt(search_data)
-        
-        # Combine search results with prompt
-        enhanced_prompt = prompt
-        if search_results:
-            enhanced_prompt = f"{prompt}\n\n{search_results}\n\nPlease incorporate relevant information from the web search results above into your response when applicable."
-        
-        # Call Gemini with enhanced prompt
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-pro')
         response = model.generate_content(
-            enhanced_prompt,
+            prompt,
             generation_config={
                 'temperature': 0.3,
                 'max_output_tokens': 1200,
             }
         )
         return response.text
-        
     except Exception as e:
-        return f"[Gemini with search temporarily unavailable: {str(e)[:50]}...]"
+        return f"[Gemini temporarily unavailable: {str(e)[:50]}...]"
 
-def generate_model_response_with_search(question: str, model_name: str, api_key_dict: Dict, 
-                                       is_initial: bool = False, role: str = "primary", 
-                                       is_challenger: bool = False) -> str:
-    """Generate a model's response with conversation context and optional web search for Gemini"""
+def generate_model_response(question: str, model_name: str, api_key_dict: Dict, 
+                           is_initial: bool = False, role: str = "primary", 
+                           is_challenger: bool = False) -> str:
+    """Generate a model's response with conversation context and guidelines"""
     
     # Get recent context
     recent_thread = []
@@ -374,15 +233,11 @@ def generate_model_response_with_search(question: str, model_name: str, api_key_
         for entry in recent_thread
     ])
     
-    # Select appropriate guidelines based on role and model
+    # Select appropriate guidelines based on role
     if is_challenger:
         base_guidelines = ELEVENTH_MAN_GUIDELINES
-    elif role == "reviewer" and model_name.lower() == "gemini":
-        base_guidelines = REVIEWER_GUIDELINES_WITH_SEARCH
-    elif model_name.lower() == "gemini" and st.session_state.consultation_mode == "deep":
-        base_guidelines = GEMINI_DEEP_MODE_GUIDELINES
-    elif st.session_state.consultation_mode == "deep":
-        base_guidelines = DEEP_MODE_ENHANCED_GUIDELINES
+    elif role == "reviewer":
+        base_guidelines = REVIEWER_GUIDELINES
     else:
         base_guidelines = CONVERSATION_GUIDELINES
     
@@ -416,17 +271,13 @@ def generate_model_response_with_search(question: str, model_name: str, api_key_
 
 You are {model_name} responding to this user query."""
 
-    # Handle Gemini with search
-    if model_name.lower() == "gemini":
-        # Extract search query for Gemini
-        search_query = extract_search_query(question, context)
-        return call_gemini_with_search(full_prompt, api_key_dict['gemini'], search_query)
-    
-    # Call other APIs normally
-    elif model_name.lower() in ["gpt-4", "gpt-4o"]:
+    # Call appropriate API
+    if model_name.lower() in ["gpt-4", "gpt-4o"]:
         return call_openai(full_prompt, api_key_dict['openai'])
     elif model_name.lower() == "claude":
         return call_anthropic(full_prompt, api_key_dict['anthropic'])
+    elif model_name.lower() == "gemini":
+        return call_gemini(full_prompt, api_key_dict['gemini'])
     else:
         return "Model not recognized"
 
@@ -523,13 +374,11 @@ with st.sidebar:
         st.info(f"**Feedback:** {feedback}")
         # TODO: Later you could email this to yourself or save to a file
 
-st.markdown("---")
-
 # Consultation mode selection
 st.subheader("🎯 Choose Your Consultation Style")
 consultation_mode = st.radio(
     "How deep should we go?",
-    ["🏃‍♂️ Quick & Simple — one model, one answer plus one review that includes web search. Can switch to Deep mode later.",
+    ["🏃‍♂️ Quick & Simple — one model, one answer plus one review. Can switch to Deep mode later.",
      "🔬 Deep Dive — work with all three models to dig into your challenge and collaborate on solutions"],
     key="mode_selection"
 )
@@ -543,14 +392,14 @@ if st.session_state.consultation_mode == "quick":
         "Pick one model to answer your question:",
         ["GPT-4", "Claude", "Gemini"],
         horizontal=True,
-        help="A second model will automatically review the response with web search for reliability."
+        help="A second model will automatically review the response for reliability."
     )
 else:
     st.subheader("📍 Deep Dive Mode")
     st.info("All three consultants will collaborate on your question.")
     selected_model = None
 
-# Problem input with audio
+# Problem input with audio (restored from v15)
 st.subheader("📢 Share Your Challenge")
 st.markdown("**Think out loud:** Complex problems often need rambling to understand properly. Don't worry about being perfectly clear - the consultants will ask follow-up questions!")
 
@@ -607,12 +456,7 @@ if st.session_state.session_active:
     
     # Display conversation
     st.markdown("---")
-    if st.session_state.consultation_mode == "quick":
-        st.subheader("💬 Consultation in Progress")
-        st.markdown("*Reviewer model will perform web search that may add several seconds*")
-    else:
-        st.subheader("💬 Consultation in Progress")
-        st.markdown("*Research-enhanced collaboration in progress*")
+    st.subheader("💬 Consultation in Progress")
     
     # Show conversation thread (preserved throughout)
     for entry in st.session_state.conversation_thread:
@@ -636,7 +480,7 @@ if st.session_state.session_active:
                 st.markdown(f"**{icon} {entry['speaker']}:** {entry['content']}")
             st.markdown("---")
     
-    # Continue conversation section
+    # Continue conversation section (IMPROVED LAYOUT)
     if len(st.session_state.conversation_thread) > 1:  # After initial responses
         st.markdown("### 💬 Continue the Conversation")
         
@@ -655,19 +499,19 @@ if st.session_state.session_active:
                     st.session_state.follow_up_mode = "deep"
                     st.session_state.consultation_mode = "deep"
         else:
-            st.markdown("**Deep Dive Mode:** All consultants collaborate")
-            
-            # Add Quick Mode option for flexibility
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("")  # Empty space for alignment
-            with col2:
-                if st.button("🏃‍♂️ Switch to Quick Mode", help="Faster single answer + review"):
-                    st.session_state.follow_up_mode = "quick"
+                st.markdown("**Deep Dive Mode:** All consultants collaborate")
+
+                # Add Quick Mode option for flexibility
+                col1, col2 = st.columns(2)
+                with col1:
+                   st.markdown("")  # Empty space for alignment
+                with col2:
+                   if st.button("🏃‍♂️ Switch to Quick Mode", help="Faster single answer + review"):
+                       st.session_state.follow_up_mode = "quick"
         
         st.markdown("---")
         
-        # Follow-up input
+        # Follow-up input (REORDERED - now before Challenge Assumptions)
         follow_up = st.text_area(
             "Ask a follow-up, share more context, or redirect:",
             placeholder="Examples:\n- Can you be more specific about...\n- That's not quite right - here's what I meant...\n- I like that direction, but what about...\n- You're overcomplicating this - I just need...",
@@ -676,7 +520,7 @@ if st.session_state.session_active:
             value=""
         )
         
-        # Challenge Assumptions checkbox
+        # Challenge Assumptions checkbox (now below input)
         challenge_active = False
         if st.session_state.consultation_mode == "deep":
             challenge_active = st.checkbox(
@@ -685,12 +529,16 @@ if st.session_state.session_active:
                 help="Uses the 'Eleventh Man' approach - one model questions consensus to prevent groupthink"
             )
         
-        # Pro tip for steering
+        # Pro tip for steering (stays below)
         st.markdown("""
         💡 **Pro tip:** You can steer the conversation by adding requests like:
         • "Be more direct about this" • "Focus on the core issue here" 
         • "Go deeper on that last point" • "I need more disagreement on this approach"
         """)
+        
+        # =================================================================
+        # FIX #1: CHALLENGE ASSUMPTIONS MODE - FIXED SECTION BEGINS HERE
+        # =================================================================
         
         # Follow-up processing logic
         follow_up_button_disabled = not follow_up.strip()
@@ -710,17 +558,18 @@ if st.session_state.session_active:
             intended_mode = st.session_state.get("follow_up_mode", current_mode)
             
             if intended_mode == "quick":
-                # Quick Mode: use assigned responder and Gemini reviewer
+                # Quick Mode: use assigned responder and reviewer
                 if not st.session_state.quick_responder:
-                    responder, _ = assign_quick_mode_roles(selected_model or "GPT-4")
+                    responder, reviewer = assign_quick_mode_roles(selected_model or "GPT-4")
                     st.session_state.quick_responder = responder
-                    st.session_state.quick_reviewer = "Gemini"
+                    st.session_state.quick_reviewer = reviewer
                 else:
                     responder = st.session_state.quick_responder
+                    reviewer = st.session_state.quick_reviewer
                 
                 # Get primary response
                 with st.spinner(f"{responder} responding..."):
-                    response = generate_model_response_with_search(follow_up, responder, api_keys, is_initial=False)
+                    response = generate_model_response(follow_up, responder, api_keys, is_initial=False)
                     st.session_state.conversation_thread.append({
                         "speaker": responder,
                         "content": response,
@@ -728,12 +577,12 @@ if st.session_state.session_active:
                         "time": datetime.now()
                     })
                 
-                # Get Gemini reviewer response with search
-                with st.spinner("💎 Gemini reviewing with web search..."):
+                # Get reviewer response
+                with st.spinner(f"{reviewer} reviewing..."):
                     review_prompt = f"Review this response for reliability: {response}"
-                    review_response = generate_model_response_with_search(review_prompt, "Gemini", api_keys, is_initial=False, role="reviewer")
+                    review_response = generate_model_response(review_prompt, reviewer, api_keys, is_initial=False, role="reviewer")
                     st.session_state.conversation_thread.append({
-                        "speaker": "Gemini [Reviewer]",
+                        "speaker": f"{reviewer} [Reviewer]",
                         "content": review_response,
                         "timestamp": "Follow-up review",
                         "time": datetime.now()
@@ -741,32 +590,28 @@ if st.session_state.session_active:
             
             else:
                 # Deep Dive Mode with optional Challenge Assumptions
-                models = ["Gemini", "GPT-4", "Claude"]  # Gemini first
-                
+                models = ["GPT-4", "Claude", "Gemini"]
+                random.shuffle(models)
+                      
                 if challenge_active:
                     # Challenge Assumptions mode - one model becomes challenger
-                    challenger_model = random.choice(["GPT-4", "Claude"])  # Not Gemini since it goes first
-                    other_models = [m for m in models if m != challenger_model]
+                    challenger_model = models.pop()  # Random selection
+                    other_models = models
                     
-                    # Standard collaborators respond
+                    # Standard collaborators respond first
                     for model in other_models:
-                        if model == "Gemini":
-                            with st.spinner("💎 Gemini researching and analyzing..."):
-                                response = generate_model_response_with_search(follow_up, model, api_keys, is_initial=False)
-                        else:
-                            with st.spinner(f"{model} building on the research..."):
-                                response = generate_model_response_with_search(follow_up, model, api_keys, is_initial=False)
-                        
-                        st.session_state.conversation_thread.append({
-                            "speaker": model,
-                            "content": response,
-                            "timestamp": "Follow-up response",
-                            "time": datetime.now()
-                        })
+                        with st.spinner(f"{model} responding..."):
+                            response = generate_model_response(follow_up, model, api_keys, is_initial=False)
+                            st.session_state.conversation_thread.append({
+                                "speaker": model,
+                                "content": response,
+                                "timestamp": "Follow-up response",
+                                "time": datetime.now()
+                            })
                     
-                    # Challenger responds last
+                    # Challenger responds last with special prompt
                     with st.spinner(f"{challenger_model} challenging assumptions..."):
-                        response = generate_model_response_with_search(follow_up, challenger_model, api_keys, is_initial=False, is_challenger=True)
+                        response = generate_model_response(follow_up, challenger_model, api_keys, is_initial=False, is_challenger=True)
                         st.session_state.conversation_thread.append({
                             "speaker": f"{challenger_model} [Challenge Assumptions]",
                             "content": response,
@@ -775,28 +620,27 @@ if st.session_state.session_active:
                         })
                 
                 else:
-                    # Standard Deep Dive - Gemini first, then others
+                    # Standard Deep Dive - all models respond normally
                     for model in models:
-                        if model == "Gemini":
-                            with st.spinner("💎 Gemini researching and analyzing..."):
-                                response = generate_model_response_with_search(follow_up, model, api_keys, is_initial=False)
-                        else:
-                            with st.spinner(f"{model} building on the research..."):
-                                response = generate_model_response_with_search(follow_up, model, api_keys, is_initial=False)
-                        
-                        st.session_state.conversation_thread.append({
-                            "speaker": model,
-                            "content": response,
-                            "timestamp": "Follow-up response",
-                            "time": datetime.now()
-                        })
+                        with st.spinner(f"{model} responding..."):
+                            response = generate_model_response(follow_up, model, api_keys, is_initial=False)
+                            st.session_state.conversation_thread.append({
+                                "speaker": model,
+                                "content": response,
+                                "timestamp": "Follow-up response",
+                                "time": datetime.now()
+                            })
             
-            # Clear input and reset state
+            # Clear input and reset state (fixed counter approach)
             st.session_state.follow_up_counter += 1
-            st.session_state.follow_up_mode = None
+            st.session_state.follow_up_mode = None  # Reset mode selection
             st.rerun()
+        
+        # =================================================================
+        # FIX #1: CHALLENGE ASSUMPTIONS MODE - FIXED SECTION ENDS HERE
+        # =================================================================
     
-    # Session management
+    # Session management (MOVED TO BOTTOM)
     st.markdown("---")
     if st.button("🔄 Start New Consultation"):
         # Reset session
@@ -805,7 +649,7 @@ if st.session_state.session_active:
                 del st.session_state[key]
         st.rerun()
 
-# Initial responses
+# Initial responses (direct execution style)
 if st.session_state.session_active and len(st.session_state.conversation_thread) == 1:
     st.markdown("---")
     st.subheader("🎭 AI Consultants Responding")
@@ -814,14 +658,14 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
     api_keys = {'openai': openai_key, 'anthropic': anthropic_key, 'gemini': gemini_key}
     
     if st.session_state.consultation_mode == "quick":
-        # Quick Mode: Single responder + Gemini reviewer with search
-        responder, _ = assign_quick_mode_roles(selected_model)
+        # Quick Mode: Single responder + reviewer
+        responder, reviewer = assign_quick_mode_roles(selected_model)
         st.session_state.quick_responder = responder
-        st.session_state.quick_reviewer = "Gemini"
+        st.session_state.quick_reviewer = reviewer
         
         # Primary response
         with st.spinner(f"{responder} thinking..."):
-            response = generate_model_response_with_search(user_input, responder, api_keys, is_initial=True)
+            response = generate_model_response(user_input, responder, api_keys, is_initial=True)
         
         st.session_state.conversation_thread.append({
             "speaker": responder,
@@ -834,35 +678,32 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
         st.markdown(f"### {icon} {responder}")
         st.markdown(response)
         
-        # Gemini reviewer response with search
-        with st.spinner("💎 Gemini reviewing with web search..."):
+        # Reviewer response
+        with st.spinner(f"{reviewer} reviewing..."):
             review_prompt = f"Review this response for reliability: {response}"
-            review_response = generate_model_response_with_search(review_prompt, "Gemini", api_keys, is_initial=True, role="reviewer")
+            review_response = generate_model_response(review_prompt, reviewer, api_keys, is_initial=True, role="reviewer")
         
         st.session_state.conversation_thread.append({
-            "speaker": "Gemini [Reviewer]",
+            "speaker": f"{reviewer} [Reviewer]",
             "content": review_response,
             "timestamp": "Initial review",
             "time": datetime.now()
         })
         
         # Display review with proper emoji parsing
+        reviewer_icon = "🤖" if reviewer == "GPT-4" else "🧠" if reviewer == "Claude" else "💎"
         emoji, content, explanation = parse_reviewer_response(review_response)
-        st.markdown(f"### 🔍 Review by 💎 Gemini")
+        st.markdown(f"### 🔍 Review by {reviewer_icon} {reviewer}")
         st.markdown(f"{emoji} {content}")
     
     else:
-        # Deep Dive Mode: Gemini first with search, then others
-        models = ["Gemini", "GPT-4", "Claude"]
+        # Deep Dive Mode: All models respond
+        models = ["GPT-4", "Claude", "Gemini"]
+        random.shuffle(models)
         
         for i, model in enumerate(models):
-            if model == "Gemini":
-                with st.spinner("💎 Gemini researching and analyzing..."):
-                    response = generate_model_response_with_search(user_input, model, api_keys, is_initial=True)
-                st.markdown("*Research-enhanced analysis:*")
-            else:
-                with st.spinner(f"{model} building on the research..."):
-                    response = generate_model_response_with_search(user_input, model, api_keys, is_initial=True)
+            with st.spinner(f"{model} thinking..."):
+                response = generate_model_response(user_input, model, api_keys, is_initial=True)
             
             st.session_state.conversation_thread.append({
                 "speaker": model,
