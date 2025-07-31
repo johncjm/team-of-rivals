@@ -1,5 +1,5 @@
-# tor1_main.py - v1.4 - Final Text Polish
-# This version incorporates the last round of user feedback on the disclaimer text.
+# tor1_main.py - v1.6 - Final UI Header Fix
+# This version corrects the disclaimer header size to match other headers.
 
 import streamlit as st
 import google.generativeai as genai
@@ -214,25 +214,25 @@ with st.sidebar:
     
     if st.button("Send Feedback", disabled=not feedback.strip()):
         st.success("Thanks! Feedback noted.")
-
 # ----------------------
 # Main UI
 # ----------------------
 st.markdown("<h1 style='margin-bottom: 0;'>Team of Rivals</h1>", unsafe_allow_html=True)
 st.markdown("*ChatGPT, Claude, Gemini. Three top AI minds. One collaborative challenge.*")
 
-with st.expander("👋 **All-Too-Candid Opening Disclaimer**", expanded=True):
-    st.markdown("""
-    Depends! If your question is simple, you may well get faster, stronger replies using the free tools at [chatgpt.com](https://chatgpt.com), [claude.ai](https://claude.ai), or [gemini.google.com](https://gemini.google.com). (Though here's a tip we learned along the way -- to be more certain your answer isn't made up, cut and paste the AI's output into another AI and ask, "Does this seem right?")
-    """)
-    st.markdown("### 🤔 So What’s This Tool For?")
-    st.markdown("""
-    **Complicated, layered questions.** The kind that benefit from disagreement, reflection, and synthesis. 
-    Here, the models aren’t just answering — they’re working together. Sometimes it adds up to more than the sum of the parts.
+st.markdown("### 👋 All-Too-Candid Opening Disclaimer")
+st.markdown("""
+Is this tool worth using? That depends! If your question is simple, you may well get faster, stronger replies using the free tools at [chatgpt.com](https://chatgpt.com), [claude.ai](https://claude.ai), or [gemini.google.com](https://gemini.google.com). (Though here's a tip we learned along the way -- to be more certain your answer isn't made up, cut and paste the AI's output into another AI and ask, "Does this seem right?")
+""")
+st.markdown("### 🤔 So What’s This Tool For?")
+st.markdown("""
+**Complicated, layered questions.** The kind that benefit from disagreement, reflection, and synthesis. 
+Here, the models aren’t just answering — they’re working together. Sometimes it adds up to more than the sum of the parts.
 
-    So is this app truly better for complex, layered questions than just using one model on its own?  
-    **We think so — but help us find out.**
-    """)
+So is this app truly better for complex, layered questions than just using one model on its own?  
+
+**We think so — but help us find out.**
+""")
 
 st.markdown("---")
 st.subheader("📢 Share Your Challenge -- talk it out or type it in")
@@ -380,4 +380,4 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
     st.rerun()
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; font-size: 0.85em; color: gray;'>Team of Rivals v1.4 — Final Polish</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 0.85em; color: gray;'>Team of Rivals v1.6 — UI Polish</p>", unsafe_allow_html=True)
