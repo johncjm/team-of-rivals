@@ -220,19 +220,17 @@ with st.sidebar:
 st.markdown("<h1 style='margin-bottom: 0;'>Team of Rivals</h1>", unsafe_allow_html=True)
 st.markdown("*ChatGPT, Claude, Gemini. Three top AI minds. One collaborative challenge.*")
 
-st.markdown("### 👋 All-Too-Candid Opening Disclaimer")
-st.markdown("""
-Is this tool worth using? That depends! If your question is simple, you may well get faster, stronger replies using the free tools at [chatgpt.com](https://chatgpt.com), [claude.ai](https://claude.ai), or [gemini.google.com](https://gemini.google.com). (Though here's a tip we learned along the way -- to be more certain your answer isn't made up, cut and paste the AI's output into another AI and ask, "Does this seem right?")
-""")
-st.markdown("### 🤔 So What’s This Tool For?")
-st.markdown("""
-**Complicated, layered questions.** The kind that benefit from disagreement, reflection, and synthesis. 
-Here, the models aren’t just answering — they’re working together. Sometimes it adds up to more than the sum of the parts.
+st.markdown("""## 🧠 A Perhaps Too Candid Introduction to Team of Rivals
+**Your personal strategy team — now with fewer hallucinations.**
 
-So is this app truly better for complex, layered questions than just using one model on its own?  
+It’s not magic. For straightforward tasks or quick questions, a single model may be exactly what you need.  
 
-**We think so — but help us find out.**
-""")
+But when the problem is messy or layered, bringing multiple models together can help challenge hidden assumptions, flag blind spots, and reduce the risk of getting made-up answers.
+
+The real benefit, though, is the way ToR can push your thinking deeper.  
+This isn’t about passively accepting AI answers — it’s about doing the work as the leader of a strong and capable team, and without a single yes-man in the room.
+
+And along the way, you’ll likely pick up a better sense of how large language models think, what they miss, and how they complement each other.""")
 
 st.markdown("---")
 st.subheader("📢 Share Your Challenge -- talk it out or type it in")
@@ -380,4 +378,4 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
     st.rerun()
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; font-size: 0.85em; color: gray;'>Team of Rivals v1.7 — undoing snafu -- you know who you are!</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 0.85em; color: gray;'>Team of Rivals v1.7c — full text & UI polish</p>", unsafe_allow_html=True)
