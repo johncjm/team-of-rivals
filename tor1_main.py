@@ -1,5 +1,5 @@
-# tor1_main.py - v1.6 - Final UI Header Fix
-# This version corrects the disclaimer header size to match other headers.
+# tor1_main.py - v1.8 - Final UI Text
+# This version incorporates the final UI text changes and is ready for production.
 
 import streamlit as st
 import google.generativeai as genai
@@ -7,6 +7,7 @@ import openai
 import anthropic
 import random
 import time
+import json
 from typing import Dict
 from datetime import datetime
 
@@ -214,24 +215,33 @@ with st.sidebar:
     
     if st.button("Send Feedback", disabled=not feedback.strip()):
         st.success("Thanks! Feedback noted.")
+
 # ----------------------
 # Main UI
 # ----------------------
 st.markdown("<h1 style='margin-bottom: 0;'>Team of Rivals</h1>", unsafe_allow_html=True)
 st.markdown("*ChatGPT, Claude, Gemini. Three top AI minds. One collaborative challenge.*")
 
-st.markdown("### 👋 All-Too-Candid Opening Disclaimer")
-st.markdown("""
-Is this tool worth using? That depends! If your question is simple, you may well get faster, stronger replies using the free tools at [chatgpt.com](https://chatgpt.com), [claude.ai](https://claude.ai), or [gemini.google.com](https://gemini.google.com). (Though here's a tip we learned along the way -- to be more certain your answer isn't made up, cut and paste the AI's output into another AI and ask, "Does this seem right?")
-""")
 st.markdown("### 🤔 So What’s This Tool For?")
 st.markdown("""
-**Complicated, layered questions.** The kind that benefit from disagreement, reflection, and synthesis. 
-Here, the models aren’t just answering — they’re working together. Sometimes it adds up to more than the sum of the parts.
+**Complicated, layered questions.** The kind that benefit from disagreement, reflection, and synthesis. Here, the models aren’t just answering — they’re working together as a team.
 
-So is this app truly better for complex, layered questions than just using one model on its own?  
+Our own testing has shown that for high-level strategic brainstorming, this collaborative approach can produce more robust and creative ideas than a single model working alone.
+""")
 
-**We think so — but help us find out.**
+st.markdown("### ✅ When to Use ToR (and When to Use a Single Model)")
+st.markdown("""
+Think of `ToR` as your personal **strategy team**. It excels at tasks that benefit from multiple, competing perspectives. Use a single model on its free website when you need a **skilled specialist**.
+
+**Use `ToR` for:**
+* **Brainstorming & Strategy:** Comparing different approaches to a complex problem.
+* **Stress-Testing an Idea:** Uncovering the pros, cons, and hidden assumptions of a new plan.
+* **Debugging Stubborn Issues:** Getting a "second opinion" on a tricky bug that a single model couldn't solve.
+
+**Use a Single Model for:**
+* **Direct Execution:** Writing a well-defined block of code, translating a paragraph, or summarizing a document.
+* **Simple Q&A:** Answering a straightforward factual question.
+* **Creative Writing:** Generating text with a single, coherent voice.
 """)
 
 st.markdown("---")
@@ -380,4 +390,4 @@ if st.session_state.session_active and len(st.session_state.conversation_thread)
     st.rerun()
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; font-size: 0.85em; color: gray;'>Team of Rivals v1.6 — UI Polish</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 0.85em; color: gray;'>Team of Rivals v1.8 — Final UI Text</p>", unsafe_allow_html=True)
